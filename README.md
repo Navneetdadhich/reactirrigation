@@ -1,12 +1,44 @@
-# React + Vite
+# Irrigation Schedular
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Homepage
+![irrigationschedular](https://github.com/user-attachments/assets/729b35a6-21da-44bb-ae0a-2b816d2c6bc8)
 
-Currently, two official plugins are available:
+## Filter Section
+![asd](https://github.com/user-attachments/assets/1066d945-9b8a-4ff3-81db-bfa860c3fcb8)
+![dd](https://github.com/user-attachments/assets/d3c11aeb-4879-4382-a10d-8aff8dd7c55c)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## various status of irrigation
+![qqweqwe](https://github.com/user-attachments/assets/95ce60b8-aa39-4149-8ed5-53c25ad5e76a)
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+# Irrigation Scheduler
+
+A React application for scheduling irrigation tasks across multiple plots with parallel motors.
+
+## Features
+- Schedule irrigation tasks with start and end times
+- Configure number of plots and motors
+- Set motor runtime and cycle intervals
+- Real-time status tracking (Pending, In Progress, Done)
+- Filter schedules by plot and status
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/reactirrigation.git
+   cd reactirrigation
+Install dependencies:
+ npm install
+
+Start the development server:
+ npm start
+
+To build the project for production:
+ npm run build
+
+Dependencies:
+-React
+-Tailwind CSS
+-Date-fns (for time calculations)
