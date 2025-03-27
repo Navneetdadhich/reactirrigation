@@ -130,44 +130,89 @@ const [selectedStatus, setSelectedStatus] = useState('All');
 
 
 const addMinutes = (time, minutes) => {
-  const hours = parseInt(time.substring(0, 2));
-  const mins = parseInt(time.substring(2, 4));
-  const secs = parseInt(time.substring(4));
+  // Ensure proper parsing of time components
+  const hours = parseInt(time.substring(0, 2), 10);
+  const mins = parseInt(time.substring(2, 4), 10);
+  const secs = parseInt(time.substring(4), 10);
   
-  let totalMins = mins + minutes;
+  if (isNaN(hours) || isNaN(mins) || isNaN(secs)) {
+    console.error('Invalid time format:', time);
+    return time; // Return original if invalid
+  }
+  
+  let totalMins = mins + parseInt(minutes, 10);
   let newHours = hours + Math.floor(totalMins / 60);
   let newMins = totalMins % 60;
-  let newSecs = secs;
   
+  // Handle 24-hour rollover
   if (newHours >= 24) {
     newHours = newHours % 24;
   }
   
-  return `${String(newHours).padStart(2, '0')}${String(newMins).padStart(2, '0')}${String(newSecs).padStart(2, '0')}`;
+  return `${String(newHours).padStart(2, '0')}${String(newMins).padStart(2, '0')}${String(secs).padStart(2, '0')}`;
 };
 
 
 const generateSchedule = () => {
+  // Check for empty fields
   if (!numPlots || !numMotors || !startTime || !endTime || !motorRuntime || !cycleInterval) {
     alert('Please fill all fields');
+    return;
+  }
+  
+  // Validate numeric inputs
+  if (numPlots <= 0 || numMotors <= 0 || motorRuntime <= 0 || cycleInterval < 0) {
+    alert('Please enter positive values for plots, motors, and times');
+    return;
+  }
+  
+  // Limit excessive inputs
+  if (numPlots > 100) {
+    alert('Maximum 100 plots allowed for performance reasons');
+    return;
+  }
+  
+  // Format time inputs if they're not in HHMMSS format
+  const formatTime = (time) => {
+    // Remove non-numeric characters
+    const cleanTime = time.replace(/[^0-9]/g, '');
+    
+    if (cleanTime.length === 1) return `0${cleanTime}0000`;
+    if (cleanTime.length === 2) return `${cleanTime}0000`;
+    if (cleanTime.length === 3) return `0${cleanTime.substring(0, 1)}${cleanTime.substring(1)}00`;
+    if (cleanTime.length === 4) return `${cleanTime}00`;
+    if (cleanTime.length === 5) return `0${cleanTime}`;
+    return cleanTime.substring(0, 6).padEnd(6, '0');
+  };
+
+  const formattedStartTime = formatTime(startTime);
+  const formattedEndTime = formatTime(endTime);
+  
+  // Validate time values
+  if (parseInt(formattedStartTime) > parseInt(formattedEndTime)) {
+    alert('End time must be after start time');
     return;
   }
 
   const plots = Array.from({length: numPlots}, (_, i) => `D${i + 1}`);
   const motors = Array.from({length: numMotors}, (_, i) => `M${i + 1}`);
   
-  let currentTime = startTime;
+  let currentTime = formattedStartTime;
   const schedule = [];
   let motorIndex = 0;
-  let plotIndex = 0;
+  
+  // Prevent infinite loops with maximum iterations
+  const maxIterations = 1000;
+  let iterations = 0;
 
-  while (currentTime <= endTime) {
-    // Assign motors to plots in sequence
+  while (currentTime <= formattedEndTime && iterations < maxIterations) {
+    iterations++;
+    
     for (let i = 0; i < plots.length; i++) {
       const motor = motors[motorIndex % motors.length];
       const cycleEndTime = addMinutes(currentTime, motorRuntime);
       
-      if (cycleEndTime <= endTime) {
+      if (cycleEndTime <= formattedEndTime) {
         schedule.push({
           index: schedule.length,
           plot: plots[i],
@@ -179,10 +224,18 @@ const generateSchedule = () => {
 
       motorIndex++;
       
-      
-      
       currentTime = addMinutes(currentTime, motorRuntime + cycleInterval);
+      
+      // Break if we've exceeded the end time
+      if (currentTime > formattedEndTime) {
+        break;
+      }
     }
+  }
+  
+  if (schedule.length === 0) {
+    alert('No valid schedule could be created with these parameters');
+    return;
   }
 
   setDatasets(schedule);
@@ -190,27 +243,44 @@ const generateSchedule = () => {
 
 
 const getStatus = (startTime, endTime) => {
-  const currentTime = new Date();
-  const currentHours = currentTime.getHours();
-  const currentMinutes = currentTime.getMinutes();
-  // const currentSeconds = currentTime.getSeconds();
-  
-  const start = new Date();
-  start.setHours(parseInt(startTime.substring(0, 2)));
-  start.setMinutes(parseInt(startTime.substring(2, 4)));
-  start.setSeconds(parseInt(startTime.substring(4)));
-  
-  const end = new Date();
-  end.setHours(parseInt(endTime.substring(0, 2)));
-  end.setMinutes(parseInt(endTime.substring(2, 4)));
-  end.setSeconds(parseInt(endTime.substring(4)));
-  
-  if (currentHours < start.getHours() || (currentHours === start.getHours() && currentMinutes < start.getMinutes())) {
-    return 'Pending';
-  } else if (currentHours > end.getHours() || (currentHours === end.getHours() && currentMinutes > end.getMinutes())) {
-    return 'Done';
-  } else {
-    return 'In Progress';
+  try {
+    const currentTime = new Date();
+    const currentHours = currentTime.getHours();
+    const currentMinutes = currentTime.getMinutes();
+    
+    // Safely parse time values
+    const startHours = parseInt(startTime.substring(0, 2), 10) || 0;
+    const startMinutes = parseInt(startTime.substring(2, 4), 10) || 0;
+    
+    const endHours = parseInt(endTime.substring(0, 2), 10) || 0;
+    const endMinutes = parseInt(endTime.substring(2, 4), 10) || 0;
+    
+    // Create comparable time values (minutes since midnight)
+    const currentTimeValue = currentHours * 60 + currentMinutes;
+    const startTimeValue = startHours * 60 + startMinutes;
+    const endTimeValue = endHours * 60 + endMinutes;
+    
+    // Handle overnight schedules
+    if (endTimeValue < startTimeValue) {
+      // Schedule crosses midnight
+      if (currentTimeValue >= startTimeValue || currentTimeValue <= endTimeValue) {
+        return 'In Progress';
+      } else {
+        return 'Pending';
+      }
+    }
+    
+    // Normal same-day schedule
+    if (currentTimeValue < startTimeValue) {
+      return 'Pending';
+    } else if (currentTimeValue > endTimeValue) {
+      return 'Done';
+    } else {
+      return 'In Progress';
+    }
+  } catch (error) {
+    console.error('Error determining status:', error);
+    return 'Unknown';
   }
 };
 
